@@ -72,6 +72,8 @@ namespace cbr_csv_to_saas
 
         private static string authOnRemoteServer(string actionUrl, string login, string password)
         {
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+
             string data = "{\"email\": \"" + login + "\", \"password\": \"" + password + "\"}";
             var httpWebRequest = (HttpWebRequest)WebRequest.Create(actionUrl);
             httpWebRequest.ContentType = "application/json";
@@ -156,6 +158,7 @@ namespace cbr_csv_to_saas
             request.CookieContainer = new CookieContainer();
             request.ContentLength = formData.Length;
             request.Timeout = 60 * 60 * 1000;
+            request.UserAgent = "cbr-csv-sync-tool";
 
             // You could add authentication here as well if needed:
             // request.PreAuthenticate = true;
