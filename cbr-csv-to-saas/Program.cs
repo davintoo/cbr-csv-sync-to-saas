@@ -15,10 +15,14 @@ namespace cbr_csv_to_saas
     {
         private static readonly HttpClient httpClient = new HttpClient();
 
-        const string UPLOAD_URI = "/api/rest.php/imports-user?action=import";
+        const string USERS_UPLOAD_URI = "/api/rest.php/imports-user?action=import";
+        const string STRUCTURE_UPLOAD_URI = "/api/rest.php/structure?action=import";
         const string AUTH_URI = "/api/rest.php/auth/session";
 
         const string APP_NAME = "Collaborator CSV sync";
+
+
+        private static readonly List<string> ALLOWED_IMPORT_TYPES = new List<string>() { "users", "structure" };
 
         static void Main(string[] args)
         {
@@ -26,8 +30,35 @@ namespace cbr_csv_to_saas
             {
                 Console.WriteLine("Start");
 
-                Console.WriteLine("Read file " + ConfigurationManager.AppSettings["file-path"] + " ...");
-                byte[] csvContent = File.ReadAllBytes(ConfigurationManager.AppSettings["file-path"]);
+                string filePath = ConfigurationManager.AppSettings["file-path"];
+
+                string importType = "users";
+
+                if (args.Length > 0)
+                {
+                    foreach (string arg in Environment.GetCommandLineArgs())
+                    {
+                        if (arg.IndexOf("--file-path") != -1)
+                        {
+                            filePath = arg.Split('=')[1];
+                        }
+                        if (arg.IndexOf("--import-type") != -1)
+                        {
+                            importType = arg.Split('=')[1];
+                        }
+                    }
+                }
+
+                if (!ALLOWED_IMPORT_TYPES.Contains(importType))
+                {
+                    throw new Exception("Unsuported import type:" + importType);
+                }
+
+
+                Console.WriteLine("Import type: '" + importType + "'");
+
+                Console.WriteLine("Read file " + filePath + " ...");
+                byte[] csvContent = File.ReadAllBytes(filePath);
                 Console.WriteLine("Read file done");
 
                 Console.WriteLine("Auth on the remote server ...");
@@ -40,7 +71,20 @@ namespace cbr_csv_to_saas
 
                 Console.WriteLine("Upload csv file to the server ...");
 
-                Console.WriteLine(uploadFile(ConfigurationManager.AppSettings["cbr-server"] + UPLOAD_URI,
+                string apiUrl;
+                switch (importType)
+                {
+                    case "users":
+                        apiUrl = USERS_UPLOAD_URI;
+                        break;
+                    case "structure":
+                        apiUrl = STRUCTURE_UPLOAD_URI;
+                        break;
+                    default:
+                        apiUrl = USERS_UPLOAD_URI;
+                        break;
+                }
+                Console.WriteLine(uploadFile(ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
                     user.access_token.ToString(), csvContent, "file.csv", "text/csv"));
 
                 Console.WriteLine("Upload csv file done");
