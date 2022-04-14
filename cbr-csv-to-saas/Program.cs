@@ -15,8 +15,8 @@ namespace cbr_csv_to_saas
     {
         private static readonly HttpClient httpClient = new HttpClient();
 
-        const string USERS_UPLOAD_URI = "/api/rest.php/imports-user?action=import";
-        const string STRUCTURE_UPLOAD_URI = "/api/rest.php/structure?action=import";
+        const string USERS_UPLOAD_URI = "/api/v2/users-import/csv";
+        const string STRUCTURE_UPLOAD_URI = "/api/v2/orgstructure/import";
         const string AUTH_URI = "/api/rest.php/auth/session";
 
         const string APP_NAME = "Collaborator CSV sync";
