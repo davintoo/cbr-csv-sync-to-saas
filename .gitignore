@@ -1,0 +1,6 @@
+.idea
+.vs
+packages
+cbr-csv-to-saas/obj
+cbr-csv-to-saas/bin/Debug
+cbr-csv-to-saas/bin/Release/*.pdb
