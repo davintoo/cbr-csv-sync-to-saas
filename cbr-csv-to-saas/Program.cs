@@ -79,6 +79,7 @@ namespace cbr_csv_to_saas
                         break;
                 }
 
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
                 if (splitLargeFileSize > 0 && importType == "users")
                 {
                     splitAndUploadFile(filePath, splitLargeFileSize, 
@@ -215,8 +216,6 @@ namespace cbr_csv_to_saas
         private static HttpWebResponse PostForm(string postUrl, string authToken, string userAgent, string contentType, byte[] formData)
         {
             HttpWebRequest request = WebRequest.Create(postUrl) as HttpWebRequest;
-            ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
-
             if (request == null)
             {
                 throw new NullReferenceException("request is not a http request");
