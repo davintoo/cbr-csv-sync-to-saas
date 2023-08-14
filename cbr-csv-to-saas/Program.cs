@@ -3,7 +3,6 @@ using System.Configuration;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
-using Newtonsoft.Json;
 using System.Net;
 using System.IO;
 using System.Diagnostics;
@@ -17,7 +16,6 @@ namespace cbr_csv_to_saas
 
         const string USERS_UPLOAD_URI = "/api/v2/users-import/csv";
         const string STRUCTURE_UPLOAD_URI = "/api/v2/orgstructure/import";
-        const string AUTH_URI = "/api/rest.php/auth/session";
 
         const string APP_NAME = "Collaborator CSV sync";
         const string BROWSER_ID = "cbr-csv-sync-tool";
@@ -67,14 +65,6 @@ namespace cbr_csv_to_saas
                     Console.WriteLine(String.Format("Split files bigger that {0} lines to multiple uploads", splitLargeFileSize));
                 }
 
-                Console.WriteLine("Auth on the remote server ...");
-                string userData = authOnRemoteServer(ConfigurationManager.AppSettings["cbr-server"] + AUTH_URI,
-                    ConfigurationManager.AppSettings["cbr-login"], ConfigurationManager.AppSettings["cbr-password"]);
-
-                dynamic user = JsonConvert.DeserializeObject(userData);
-
-                Console.WriteLine("Auth done");
-
                 string apiUrl;
                 switch (importType)
                 {
@@ -91,8 +81,10 @@ namespace cbr_csv_to_saas
 
                 if (splitLargeFileSize > 0 && importType == "users")
                 {
-                    splitAndUploadFile(filePath, splitLargeFileSize, ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
-                    user.access_token.ToString());
+                    splitAndUploadFile(filePath, splitLargeFileSize, 
+                        ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
+                        ConfigurationManager.AppSettings["cbr-token"]
+                    );
                 }
                 else
                 {
@@ -102,7 +94,7 @@ namespace cbr_csv_to_saas
 
                     Console.WriteLine("Upload csv file to the server ...");
                     Console.WriteLine(uploadFile(ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
-                    user.access_token.ToString(), csvContent, "file.csv", "text/csv"));
+                        ConfigurationManager.AppSettings["cbr-token"], csvContent, "file.csv", "text/csv"));
                 }
 
                 Console.WriteLine("Upload csv file done");
@@ -177,34 +169,6 @@ namespace cbr_csv_to_saas
             }
         }
 
-        private static string authOnRemoteServer(string actionUrl, string login, string password)
-        {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create(actionUrl);
-            httpWebRequest.ContentType = "application/json";
-            httpWebRequest.Method = "POST";
-            httpWebRequest.UserAgent = BROWSER_ID;
-            string data = "{\"email\": \"" + login + "\", \"password\": \"" + password + "\", \"browser_id\": \"" + BROWSER_ID + "\"}";
-
-            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
-            {
-                streamWriter.Write(data);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-            string strRes = String.Empty;
-            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
-            {
-                strRes = streamReader.ReadToEnd();
-                streamReader.Close();
-                httpResponse.Close();
-                return strRes;
-            }
-        }
-
         private static string uploadFile(string actionUrl, string authToken, byte[] fileContent, string fileName, string fileMimeType, string uid = null)
         {
             Dictionary<string, object> postParameters = new Dictionary<string, object>();
@@ -251,6 +215,7 @@ namespace cbr_csv_to_saas
         private static HttpWebResponse PostForm(string postUrl, string authToken, string userAgent, string contentType, byte[] formData)
         {
             HttpWebRequest request = WebRequest.Create(postUrl) as HttpWebRequest;
+            ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
             if (request == null)
             {
@@ -266,7 +231,7 @@ namespace cbr_csv_to_saas
             request.Timeout = 60 * 60 * 1000;
             request.Headers.Add("Cache-Control", "no-cache");
             request.Headers.Add("Pragma", "no-cache");
-            request.Headers.Add("Authorization", "Bearer " + authToken);
+            request.Headers.Add("X-Cbr-Authorization", "Bearer " + authToken);
 
             // Send the form data to the request.
             using (Stream requestStream = request.GetRequestStream())
