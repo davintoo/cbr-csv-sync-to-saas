@@ -33,6 +33,7 @@ namespace cbr_csv_to_saas
                 int splitLargeFileSize = Int32.Parse(ConfigurationManager.AppSettings["split-large-file-size"]);
 
                 string importType = "users";
+                string structurePrefix = null;
 
                 if (args.Length > 0)
                 {
@@ -50,6 +51,10 @@ namespace cbr_csv_to_saas
                         {
                             splitLargeFileSize = Int32.Parse(arg.Split('=')[1]);
                         }
+                        if (arg.IndexOf("--structure-prefix") != -1)
+                        {
+                            structurePrefix = arg.Split('=')[1];
+                        }
                     }
                 }
 
@@ -64,8 +69,12 @@ namespace cbr_csv_to_saas
                 {
                     Console.WriteLine(String.Format("Split files bigger that {0} lines to multiple uploads", splitLargeFileSize));
                 }
+                if (!String.IsNullOrEmpty(structurePrefix))
+                {
+                    Console.WriteLine(String.Format("Use prefix '{0}'", structurePrefix));
+                }
 
-                string apiUrl;
+                    string apiUrl;
                 switch (importType)
                 {
                     case "users":
@@ -84,7 +93,8 @@ namespace cbr_csv_to_saas
                 {
                     splitAndUploadFile(filePath, splitLargeFileSize, 
                         ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
-                        ConfigurationManager.AppSettings["cbr-token"]
+                        ConfigurationManager.AppSettings["cbr-token"], 
+                        structurePrefix
                     );
                 }
                 else
@@ -95,7 +105,7 @@ namespace cbr_csv_to_saas
 
                     Console.WriteLine("Upload csv file to the server ...");
                     Console.WriteLine(uploadFile(ConfigurationManager.AppSettings["cbr-server"] + apiUrl,
-                        ConfigurationManager.AppSettings["cbr-token"], csvContent, "file.csv", "text/csv"));
+                        ConfigurationManager.AppSettings["cbr-token"], csvContent, "file.csv", "text/csv", structurePrefix));
                 }
 
                 Console.WriteLine("Upload csv file done");
@@ -125,7 +135,7 @@ namespace cbr_csv_to_saas
             }
         }
 
-        private static void splitAndUploadFile(string filePath, int splitAfterSize, string actionUrl, string authToken)
+        private static void splitAndUploadFile(string filePath, int splitAfterSize, string actionUrl, string authToken, string structurePrefix = null)
         {
 
             Console.WriteLine("Read file " + filePath + " ...");
@@ -151,7 +161,7 @@ namespace cbr_csv_to_saas
                         string text = String.Join(Environment.NewLine, lines);
                         f++;
                         Console.WriteLine(String.Format("Upload csv file (part #{0}) to the server ...", f));
-                        Console.WriteLine(uploadFile(actionUrl, authToken, System.Text.Encoding.UTF8.GetBytes(text), String.Format("file{0}.csv", f), "text/csv"));
+                        Console.WriteLine(uploadFile(actionUrl, authToken, System.Text.Encoding.UTF8.GetBytes(text), String.Format("file{0}.csv", f), "text/csv", structurePrefix));
                         lines.Clear();
                         lines.Add(firstLine);
                         l = 0;
@@ -166,17 +176,18 @@ namespace cbr_csv_to_saas
                 f++;
                 string text = String.Join(Environment.NewLine, lines);
                 Console.WriteLine(String.Format("Upload csv file (part #{0}) to the server ...", f));
-                Console.WriteLine(uploadFile(actionUrl, authToken, System.Text.Encoding.UTF8.GetBytes(text), String.Format("file{0}.csv", f), "text/csv"));
+                Console.WriteLine(uploadFile(actionUrl, authToken, System.Text.Encoding.UTF8.GetBytes(text), String.Format("file{0}.csv", f), "text/csv", structurePrefix));
             }
         }
 
-        private static string uploadFile(string actionUrl, string authToken, byte[] fileContent, string fileName, string fileMimeType, string uid = null)
+        private static string uploadFile(string actionUrl, string authToken, byte[] fileContent, string fileName, string fileMimeType, string structurePrefix = null)
         {
             Dictionary<string, object> postParameters = new Dictionary<string, object>();
-            if (uid != null)
+            if (structurePrefix != null)
             {
-                postParameters.Add("uid", uid);
+                actionUrl = actionUrl + "?prefix=" + structurePrefix;
             }
+            Console.WriteLine(String.Format("actionUrl: {0}", actionUrl));
             postParameters.Add("file",
                 new FormUpload.FileParameter(fileContent, fileName, fileMimeType));
 
